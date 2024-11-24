@@ -50,6 +50,11 @@ namespace FinancesApp.Controllers
             {
                 return BadRequest();
             }
+            
+            if(CurrencyExists(currency.Name))
+            {
+                return BadRequest("Currency with such name already exists");
+            }
 
             _context.Entry(currency).State = EntityState.Modified;
 
@@ -77,6 +82,11 @@ namespace FinancesApp.Controllers
         [HttpPost]
         public async Task<ActionResult<Currency>> PostCurrency(Currency currency)
         {
+            if(CurrencyExists(currency.Name))
+            {
+                return BadRequest("Currency with such name already exists");
+            }
+
             _context.Currencies.Add(currency);
             await _context.SaveChangesAsync();
 
@@ -102,6 +112,11 @@ namespace FinancesApp.Controllers
         private bool CurrencyExists(int id)
         {
             return _context.Currencies.Any(e => e.Id == id);
+        }
+
+        private bool CurrencyExists(string name)
+        {
+            return _context.Currencies.Any(e => e.Name == name);
         }
     }
 }

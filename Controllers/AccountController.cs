@@ -51,6 +51,16 @@ namespace FinancesApp.Controllers
                 return BadRequest();
             }
 
+            if(AccountExists(account.Name))
+            {
+                return BadRequest("Account with such name already exists");
+            }
+
+            if(!AccountCurrencyExists(account.CurrencyId))
+            {
+                return BadRequest("Currency not found");
+            }
+
             _context.Entry(account).State = EntityState.Modified;
 
             try
@@ -77,6 +87,24 @@ namespace FinancesApp.Controllers
         [HttpPost]
         public async Task<ActionResult<Account>> PostAccount(Account account)
         {
+            var currencyId = account.CurrencyId;
+            var currency = await _context.Currencies.FirstOrDefaultAsync((x) => x.Id == currencyId);
+
+            if(currency == null)
+            {
+                return BadRequest("Currency not found");    
+            }
+
+            if(AccountExists(account.Name))
+            {
+                return BadRequest("Account with such name already exists");
+            }
+
+            if(!AccountCurrencyExists(currencyId))
+            {
+                return BadRequest("Currency not found");
+            }
+
             _context.Accounts.Add(account);
             await _context.SaveChangesAsync();
 
@@ -102,6 +130,16 @@ namespace FinancesApp.Controllers
         private bool AccountExists(int id)
         {
             return _context.Accounts.Any(e => e.Id == id);
+        }
+
+        private bool AccountExists(string name)
+        {
+            return _context.Accounts.Any(e => e.Name == name);
+        }
+
+        private bool AccountCurrencyExists(int currencyId)
+        {
+            return _context.Currencies.Any(e => e.Id == currencyId);
         }
     }
 }

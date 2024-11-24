@@ -51,6 +51,11 @@ namespace FinancesApp.Controllers
                 return BadRequest();
             }
 
+            if(!TransactionAccountExists(transaction.AccountId))
+            {
+                return BadRequest("Account not found");
+            }
+
             _context.Entry(transaction).State = EntityState.Modified;
 
             try
@@ -77,6 +82,10 @@ namespace FinancesApp.Controllers
         [HttpPost]
         public async Task<ActionResult<Transaction>> PostTransaction(Transaction transaction)
         {
+            if(!TransactionAccountExists(transaction.AccountId))
+            {
+                return BadRequest("Account not found");
+            }
             _context.Transactions.Add(transaction);
             await _context.SaveChangesAsync();
 
@@ -102,6 +111,11 @@ namespace FinancesApp.Controllers
         private bool TransactionExists(int id)
         {
             return _context.Transactions.Any(e => e.Id == id);
+        }
+
+        private bool TransactionAccountExists(int accountId)
+        {
+            return _context.Accounts.Any(e => e.Id == accountId);
         }
     }
 }
