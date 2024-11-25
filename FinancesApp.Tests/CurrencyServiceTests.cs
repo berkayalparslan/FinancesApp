@@ -1,7 +1,6 @@
 using FinancesApp.Models;
 using FinancesApp.Repositories;
 using FinancesApp.Services;
-using Microsoft.AspNetCore.Mvc;
 using Moq;
 
 namespace FinancesApp.Tests;

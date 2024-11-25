@@ -1,11 +1,7 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using FinancesApp.Models;
+using FinancesApp.Services;
 
 namespace FinancesApp.Controllers
 {
@@ -13,32 +9,35 @@ namespace FinancesApp.Controllers
     [ApiController]
     public class TransactionController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly ITransactionService _transactionService;
+        private readonly IAccountService _accountService;
 
-        public TransactionController(AppDbContext context)
+        public TransactionController(ITransactionService transactionService, IAccountService accountService)
         {
-            _context = context;
+            _transactionService = transactionService;
+            _accountService = accountService;
         }
 
         // GET: api/Transaction
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Transaction>>> GetTransactions()
         {
-            return await _context.Transactions.ToListAsync();
+            var transactions = await _transactionService.GetTransactionsAsync();
+            return Ok(transactions);
         }
 
         // GET: api/Transaction/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Transaction>> GetTransaction(int id)
         {
-            var transaction = await _context.Transactions.FindAsync(id);
+            var transaction = await _transactionService.GetTransactionAsync(id);
 
             if (transaction == null)
             {
                 return NotFound();
             }
 
-            return transaction;
+            return Ok(transaction);
         }
 
         // PUT: api/Transaction/5
@@ -51,30 +50,15 @@ namespace FinancesApp.Controllers
                 return BadRequest();
             }
 
-            if(!TransactionAccountExists(transaction.AccountId))
-            {
-                return BadRequest("Account not found");
-            }
+            var accountFromDb = await _accountService.GetAccountAsync(transaction.AccountId);
 
-            _context.Entry(transaction).State = EntityState.Modified;
-
-            try
+            if (accountFromDb == null)
             {
-                await _context.SaveChangesAsync();
+                return NotFound("Account not found");
             }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!TransactionExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
+            var result = await _transactionService.UpdateTransactionAsync(transaction);
 
-            return NoContent();
+            return Ok(result);
         }
 
         // POST: api/Transaction
@@ -82,40 +66,29 @@ namespace FinancesApp.Controllers
         [HttpPost]
         public async Task<ActionResult<Transaction>> PostTransaction(Transaction transaction)
         {
-            if(!TransactionAccountExists(transaction.AccountId))
-            {
-                return BadRequest("Account not found");
-            }
-            _context.Transactions.Add(transaction);
-            await _context.SaveChangesAsync();
+            var accountFromDb = await _accountService.GetAccountAsync(transaction.AccountId);
 
-            return CreatedAtAction("GetTransaction", new { id = transaction.Id }, transaction);
+            if (accountFromDb == null)
+            {
+                return NotFound("Account not found");
+            }
+            var result = await _transactionService.CreateTransactionAsync(transaction);
+            return Ok(result);
         }
 
         // DELETE: api/Transaction/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteTransaction(int id)
         {
-            var transaction = await _context.Transactions.FindAsync(id);
+            var transaction = await _transactionService.GetTransactionAsync(id);
+
             if (transaction == null)
             {
-                return NotFound();
+                return NotFound("Transaction not found");
             }
 
-            _context.Transactions.Remove(transaction);
-            await _context.SaveChangesAsync();
-
+            await _transactionService.DeleteTransactionAsync(transaction);
             return NoContent();
-        }
-
-        private bool TransactionExists(int id)
-        {
-            return _context.Transactions.Any(e => e.Id == id);
-        }
-
-        private bool TransactionAccountExists(int accountId)
-        {
-            return _context.Accounts.Any(e => e.Id == accountId);
         }
     }
 }

@@ -1,11 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using FinancesApp.Models;
+using FinancesApp.Services;
 
 namespace FinancesApp.Controllers
 {
@@ -13,32 +8,35 @@ namespace FinancesApp.Controllers
     [ApiController]
     public class AccountController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IAccountService _accountService;
+        private readonly ICurrencyService _currencyService;
 
-        public AccountController(AppDbContext context)
+        public AccountController(IAccountService accountService, ICurrencyService currencyService)
         {
-            _context = context;
+            _accountService = accountService;
+            _currencyService = currencyService;
         }
 
         // GET: api/Account
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Account>>> GetAccounts()
         {
-            return await _context.Accounts.ToListAsync();
+            var accounts = await _accountService.GetAccountsAsync();
+            return Ok(accounts);
         }
 
         // GET: api/Account/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Account>> GetAccount(int id)
         {
-            var account = await _context.Accounts.FindAsync(id);
+            var account = await _accountService.GetAccountAsync(id);
 
             if (account == null)
             {
                 return NotFound();
             }
 
-            return account;
+            return Ok(account);
         }
 
         // PUT: api/Account/5
@@ -50,36 +48,27 @@ namespace FinancesApp.Controllers
             {
                 return BadRequest();
             }
+            var accountFromDb = await _accountService.GetAccountAsync(id);
 
-            if(AccountExists(account.Name))
+            if (accountFromDb == null)
+            {
+                return NotFound("Account not found");
+            }
+            var accountWithSameName = await _accountService.GetAccountAsync(account.Name);
+
+            if (accountWithSameName != null && accountWithSameName.Id != id)
             {
                 return BadRequest("Account with such name already exists");
             }
+            var accountCurrency = await _currencyService.GetCurrencyAsync(account.CurrencyId);
 
-            if(!AccountCurrencyExists(account.CurrencyId))
+            if (accountCurrency == null)
             {
                 return BadRequest("Currency not found");
             }
+            var result = await _accountService.UpdateAccountAsync(account);
 
-            _context.Entry(account).State = EntityState.Modified;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!AccountExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-
-            return NoContent();
+            return Ok(result);
         }
 
         // POST: api/Account
@@ -87,59 +76,35 @@ namespace FinancesApp.Controllers
         [HttpPost]
         public async Task<ActionResult<Account>> PostAccount(Account account)
         {
-            var currencyId = account.CurrencyId;
-            var currency = await _context.Currencies.FirstOrDefaultAsync((x) => x.Id == currencyId);
+            var accountWithSameName = await _accountService.GetAccountAsync(account.Name);
 
-            if(currency == null)
-            {
-                return BadRequest("Currency not found");    
-            }
-
-            if(AccountExists(account.Name))
+            if (accountWithSameName != null)
             {
                 return BadRequest("Account with such name already exists");
             }
+            var currency = await _currencyService.GetCurrencyAsync(account.CurrencyId);
 
-            if(!AccountCurrencyExists(currencyId))
+            if (currency == null)
             {
                 return BadRequest("Currency not found");
             }
 
-            _context.Accounts.Add(account);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction("GetAccount", new { id = account.Id }, account);
+            var result = _accountService.CreateAccountAsync(account);
+            return Ok(result);
         }
 
         // DELETE: api/Account/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteAccount(int id)
         {
-            var account = await _context.Accounts.FindAsync(id);
+            var account = await _accountService.GetAccountAsync(id);
+
             if (account == null)
             {
-                return NotFound();
+                return NotFound("Account not found");
             }
-
-            _context.Accounts.Remove(account);
-            await _context.SaveChangesAsync();
-
+            await _accountService.DeleteAccountAsync(account);
             return NoContent();
-        }
-
-        private bool AccountExists(int id)
-        {
-            return _context.Accounts.Any(e => e.Id == id);
-        }
-
-        private bool AccountExists(string name)
-        {
-            return _context.Accounts.Any(e => e.Name == name);
-        }
-
-        private bool AccountCurrencyExists(int currencyId)
-        {
-            return _context.Currencies.Any(e => e.Id == currencyId);
         }
     }
 }

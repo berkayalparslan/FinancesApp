@@ -48,6 +48,10 @@ namespace FinancesApp.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> PutCurrency(int id, Currency currency)
         {
+            if (id != currency.Id)
+            {
+                return BadRequest();
+            }
             var currencyFromDb = await _currencyService.GetCurrencyAsync(id);
 
             if(currencyFromDb == null)

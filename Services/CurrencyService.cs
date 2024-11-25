@@ -1,6 +1,5 @@
 using FinancesApp.Models;
 using FinancesApp.Repositories;
-using Microsoft.EntityFrameworkCore;
 
 namespace FinancesApp.Services;
 
