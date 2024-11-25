@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using FinancesApp.Models;
+using FinancesApp.Services;
 
 namespace FinancesApp.Controllers
 {
@@ -13,32 +14,33 @@ namespace FinancesApp.Controllers
     [ApiController]
     public class CurrencyController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly ICurrencyService _currencyService;
 
-        public CurrencyController(AppDbContext context)
+        public CurrencyController(ICurrencyService currencyService)
         {
-            _context = context;
+            _currencyService = currencyService;
         }
 
         // GET: api/Currency
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Currency>>> GetCurrencies()
         {
-            return await _context.Currencies.ToListAsync();
+            var currencies = await _currencyService.GetCurrenciesAsync();
+            return Ok(currencies);
         }
 
         // GET: api/Currency/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Currency>> GetCurrency(int id)
         {
-            var currency = await _context.Currencies.FindAsync(id);
+            var currency = await _currencyService.GetCurrencyAsync(id);
 
             if (currency == null)
             {
                 return NotFound();
             }
 
-            return currency;
+            return Ok(currency);
         }
 
         // PUT: api/Currency/5
@@ -46,35 +48,23 @@ namespace FinancesApp.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> PutCurrency(int id, Currency currency)
         {
-            if (id != currency.Id)
+            var currencyFromDb = await _currencyService.GetCurrencyAsync(id);
+
+            if(currencyFromDb == null)
             {
-                return BadRequest();
+                return NotFound("Currency not found");
             }
-            
-            if(CurrencyExists(currency.Name))
+
+            var currencyWithSameName = await _currencyService.GetCurrencyAsync(currency.Name);
+
+            if(currencyWithSameName != null && currencyWithSameName.Id != id)
             {
                 return BadRequest("Currency with such name already exists");
             }
+            var result = await _currencyService.UpdateCurrencyAsync(currency);
+            
 
-            _context.Entry(currency).State = EntityState.Modified;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!CurrencyExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-
-            return NoContent();
+            return Ok(result);
         }
 
         // POST: api/Currency
@@ -82,41 +72,28 @@ namespace FinancesApp.Controllers
         [HttpPost]
         public async Task<ActionResult<Currency>> PostCurrency(Currency currency)
         {
-            if(CurrencyExists(currency.Name))
+            var currencyWithSameName = await _currencyService.GetCurrencyAsync(currency.Name);
+
+            if(currencyWithSameName != null)
             {
                 return BadRequest("Currency with such name already exists");
             }
-
-            _context.Currencies.Add(currency);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction("GetCurrency", new { id = currency.Id }, currency);
+            var result = await _currencyService.CreateCurrencyAsync(currency);
+            return Ok(result);
         }
 
         // DELETE: api/Currency/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteCurrency(int id)
         {
-            var currency = await _context.Currencies.FindAsync(id);
+            var currency = await _currencyService.GetCurrencyAsync(id);
+
             if (currency == null)
             {
                 return NotFound();
             }
-
-            _context.Currencies.Remove(currency);
-            await _context.SaveChangesAsync();
-
+            await _currencyService.DeleteCurrencyAsync(currency);
             return NoContent();
-        }
-
-        private bool CurrencyExists(int id)
-        {
-            return _context.Currencies.Any(e => e.Id == id);
-        }
-
-        private bool CurrencyExists(string name)
-        {
-            return _context.Currencies.Any(e => e.Name == name);
         }
     }
 }
