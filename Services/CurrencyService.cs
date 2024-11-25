@@ -1,4 +1,5 @@
 using FinancesApp.Models;
+using FinancesApp.Repositories;
 using Microsoft.EntityFrameworkCore;
 
 namespace FinancesApp.Services;
@@ -15,46 +16,42 @@ public interface ICurrencyService
 
 public class CurrencyService : ICurrencyService
 {
-    private readonly AppDbContext _context;
+    private readonly IRepository<Currency> _repository;
 
-    public CurrencyService(AppDbContext context)
+    public CurrencyService(IRepository<Currency> repository)
     {
-        _context = context;
+        _repository = repository;
     }
 
     public async Task<Currency> CreateCurrencyAsync(Currency currency)
     {
-        var currencyResult =  _context.Currencies.Add(currency);
-        await _context.SaveChangesAsync();
-        return currencyResult.Entity;
+        var currencyCreated = await _repository.CreateAsync(currency);
+        return currencyCreated;
     }
 
     public async Task<bool> DeleteCurrencyAsync(Currency currency)
     {
-        _context.Currencies.Remove(currency);
-         var result = await _context.SaveChangesAsync();
-         return result > 0;
+        var deleted = await _repository.DeleteAsync(currency);
+        return deleted;
     }
 
     public async Task<IEnumerable<Currency>> GetCurrenciesAsync()
     {
-        return await _context.Currencies.ToListAsync();
+        return await _repository.GetAllAsync(x => true);
     }
 
     public async Task<Currency> GetCurrencyAsync(int id)
     {
-        return await _context.Currencies.FirstOrDefaultAsync(x => x.Id == id); // var currency = await _context.Currencies.FindAsync(id);
+        return await _repository.GetAsync(x => x.Id == id); // var currency = await _context.Currencies.FindAsync(id);
     }
 
     public async Task<Currency> GetCurrencyAsync(string name)
     {
-        return await _context.Currencies.FirstOrDefaultAsync(x => x.Name == name); 
+        return await _repository.GetAsync(x => x.Name == name); 
     }
 
     public async Task<Currency> UpdateCurrencyAsync(Currency currency)
     {
-        await _context.Entry(currency).State = EntityState.Modified;
-        await _context.SaveChangesAsync();
-        return currency;
+        return await _repository.UpdateAsync(currency);
     }
 }   
