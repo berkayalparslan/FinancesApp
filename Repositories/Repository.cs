@@ -6,35 +6,35 @@ namespace FinancesApp.Repositories;
 
 public class Repository<T> : IRepository<T> where T : class
 {
-    private readonly AppDbContext _context;
+    protected readonly AppDbContext _context;
     public Repository(AppDbContext context)
     {
         _context = context;
     }
-    public async Task<T> GetAsync(Expression<Func<T, bool>> expression)
+    public async Task<T?> GetAsync(Expression<Func<T, bool>> expression)
     {
         return await _context.Set<T>().FirstOrDefaultAsync(expression);
     }
-    public async Task<T> AddAsync(T entity)
+    public async Task<T?> AddAsync(T entity)
     {
         await _context.Set<T>().AddAsync(entity);
         await _context.SaveChangesAsync();
         return entity;
     }
 
-    public async Task<List<T>> GetAllAsync(Expression<Func<T, bool>> expression)
+    public async Task<List<T>?> GetAllAsync(Expression<Func<T, bool>> expression)
     {
         return await _context.Set<T>().Where(expression).ToListAsync();
     }
 
-    public async Task<T> CreateAsync(T entity)
+    public virtual async Task<T?> CreateAsync(T entity)
     {
         var result = await _context.AddAsync(entity);
         await _context.SaveChangesAsync();
         return result.Entity;
     }
 
-    public async Task<T> UpdateAsync(T entity)
+    public async Task<T?> UpdateAsync(T entity)
     {
         var result = _context.Update(entity);
         await _context.SaveChangesAsync();

@@ -5,11 +5,11 @@ namespace FinancesApp.Services;
 
 public interface IAccountService
 {
-    Task<IEnumerable<Account>> GetAccountsAsync();
-    Task<Account> GetAccountAsync(int id);
-    Task<Account> GetAccountAsync(string accountName);
-    Task<Account> CreateAccountAsync(Account account);
-    Task<Account> UpdateAccountAsync(Account account);
+    Task<IEnumerable<Account>?> GetAccountsAsync();
+    Task<Account?> GetAccountAsync(int id);
+    Task<Account?> GetAccountAsync(string accountName);
+    Task<Account?> CreateAccountAsync(Account account);
+    Task<Account?> UpdateAccountAsync(Account account);
     Task<bool> DeleteAccountAsync(Account account);
 }
 
@@ -22,7 +22,7 @@ public class AccountService : IAccountService
         _repository = repository;
     }
 
-    public async Task<Account> CreateAccountAsync(Account account)
+    public async Task<Account?> CreateAccountAsync(Account account)
     {
         return await _repository.CreateAsync(account);
     }
@@ -32,22 +32,22 @@ public class AccountService : IAccountService
         return await _repository.DeleteAsync(account);
     }
 
-    public async Task<IEnumerable<Account>> GetAccountsAsync()
+    public async Task<IEnumerable<Account>?> GetAccountsAsync()
     {
         return await _repository.GetAllAsync(x => true);
     }
 
-    public async Task<Account> GetAccountAsync(int id)
+    public async Task<Account?> GetAccountAsync(int id)
     {
         return await _repository.GetAsync(x => x.Id == id);
     }
 
-    public async Task<Account> GetAccountAsync(string accountName)
+    public async Task<Account?> GetAccountAsync(string accountName)
     {
         return await _repository.GetAsync(x => x.Name == accountName);
     }
 
-    public async Task<Account> UpdateAccountAsync(Account account)
+    public async Task<Account?> UpdateAccountAsync(Account account)
     {
         return await _repository.UpdateAsync(account);
     }
